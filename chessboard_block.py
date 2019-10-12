@@ -24,7 +24,15 @@ def find_cb_points(img, cb_size):
     return ret, corners
 
 
-def show_cb_corners_and_handle_program_exit(img, cb_size, ret, corners):
+def _draw(img, corners, imgpts):
+    corner = tuple(corners[0].ravel())
+    img = cv2.line(img, corner, tuple(imgpts[0].ravel()), (255, 0, 0), 5)
+    img = cv2.line(img, corner, tuple(imgpts[1].ravel()), (0, 255, 0), 5)
+    img = cv2.line(img, corner, tuple(imgpts[2].ravel()), (0, 0, 255), 5)
+    return img
+
+
+def draw_box_and_chessboard(img, cb_size, ret, corners, img_pts_3d):
     """
     Function to ingest a chessboard image with a set of pixel coordinates
     representing the points and plot that image to screen.
@@ -41,6 +49,7 @@ def show_cb_corners_and_handle_program_exit(img, cb_size, ret, corners):
     """
     # draw the chessboard
     cv2.drawChessboardCorners(img, cb_size, corners, ret)
+    img = _draw(img, corners, img_pts_3d)
     cv2.imshow("Chessboard", img)
     k = cv2.waitKey(1)
     return k
@@ -57,17 +66,22 @@ def main(cb_size):
             cb_ret, corners = find_cb_points(frame, cb_size)
 
             if cb_ret == True:
-                user_val = show_cb_corners_and_handle_program_exit(frame, cb_size, cb_ret, corners)
+                # create real world object points and associated real world axes based
+                # based on chessboard configuration
+                objp = np.zeros((cb_size[0] * cb_size[1], 3), np.float32)
+                objp[:, :2] = np.mgrid[0:cb_size[1], 0:cb_size[0]].T.reshape(-1, 2)
+                axis = np.float32([[3, 0, 0], [0, 3, 0], [0, 0, -3]]).reshape(-1, 3)
+
+                # Find the rotation and translation vectors.
+                ret, rvecs, tvecs = cv2.solvePnP(objp, corners, mtx, dist)
+                # project 3D points to image plane
+                imgpts, jac = cv2.projectPoints(axis, rvecs, tvecs, mtx, dist)
+
+                user_val = draw_box_and_chessboard(frame, cb_size, cb_ret, corners, imgpts)
                 if user_val == ord("q"):
                     cv2.destroyAllWindows()
                     print("Exiting program ..")
                     exit(0)
-
-                # create real world object points and associated real world axes based
-                # based on chessboard configuration
-                objp = np.zeros((6 * 7, 3), np.float32)
-                objp[:, :2] = np.mgrid[0:7, 0:6].T.reshape(-1, 2)
-                axis = np.float32([[3, 0, 0], [0, 3, 0], [0, 0, -3]]).reshape(-1, 3)
 
     # When everything done, release the capture
     cap.release()
