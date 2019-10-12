@@ -90,10 +90,8 @@ class CameraCalibration:
         rimg = None
 
         rms, self.cam_calib_mat, self.lens_dist, _, _ = cv2.calibrateCamera(
-            obj_pts_list, img_pts_list,
-            imageSize=shape,
-            flags=None,
-            criteria=(cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 1e-6)
+            obj_pts_list, img_pts_list, shape, self.cam_calib_mat, self.lens_dist,
+            None, None, criteria=(cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 1e-6)
         )
 
         print("-"*20)
@@ -109,4 +107,4 @@ class CameraCalibration:
 
 if __name__ == "__main__":
     calib = CameraCalibration()
-    calib.capture_valid_images()
+    calib.calibrate()

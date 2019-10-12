@@ -1,14 +1,26 @@
 import cv2
 import numpy as np
 
+from camera_calib import CameraCalibration
 from utils import find_cb_points
 
 
 def _draw(img, corners, imgpts):
-    corner = tuple(corners[0].ravel())
-    img = cv2.line(img, corner, tuple(imgpts[0].ravel()), (255, 0, 0), 5)
-    img = cv2.line(img, corner, tuple(imgpts[1].ravel()), (0, 255, 0), 5)
-    img = cv2.line(img, corner, tuple(imgpts[2].ravel()), (0, 0, 255), 5)
+    """
+    Code taken from: https://docs.opencv.org/master/d7/d53/tutorial_py_pose.html
+    :param img:
+    :param corners:
+    :param imgpts:
+    :return:
+    """
+    imgpts = np.int32(imgpts).reshape(-1, 2)
+    # draw ground floor in green
+    img = cv2.drawContours(img, [imgpts[:4]], -1, (0, 255, 0), -3)
+    # draw pillars in blue color
+    for i, j in zip(range(4), range(4, 8)):
+        img = cv2.line(img, tuple(imgpts[i]), tuple(imgpts[j]), (255), 3)
+    # draw top layer in red color
+    img = cv2.drawContours(img, [imgpts[4:]], -1, (0, 0, 255), 3)
     return img
 
 
@@ -35,7 +47,7 @@ def draw_box_and_chessboard(img, cb_size, ret, corners, img_pts_3d):
     return k
 
 
-def main(cb_size):
+def main(cb_size, mtx, dist):
     cap = cv2.VideoCapture(0)
 
     while True:
@@ -50,7 +62,10 @@ def main(cb_size):
                 # based on chessboard configuration
                 objp = np.zeros((cb_size[0] * cb_size[1], 3), np.float32)
                 objp[:, :2] = np.mgrid[0:cb_size[1], 0:cb_size[0]].T.reshape(-1, 2)
-                axis = np.float32([[3, 0, 0], [0, 3, 0], [0, 0, -3]]).reshape(-1, 3)
+
+                # create coords of cube
+                axis = np.float32([[0, 0, 0], [0, 3, 0], [3, 3, 0], [3, 0, 0],
+                                   [0, 0, -3], [0, 3, -3], [3, 3, -3], [3, 0, -3]])
 
                 # Find the rotation and translation vectors.
                 ret, rvecs, tvecs = cv2.solvePnP(objp, corners, mtx, dist)
@@ -60,13 +75,19 @@ def main(cb_size):
                 user_val = draw_box_and_chessboard(frame, cb_size, cb_ret, corners, imgpts)
                 if user_val == ord("q"):
                     cv2.destroyAllWindows()
-                    print("Exiting program ..")
-                    exit(0)
+                    break
+            else:
+                cv2.destroyAllWindows()
 
     # When everything done, release the capture
     cap.release()
+    print("Exiting program ..")
 
 
 if __name__ == "__main__":
     # chessboard dimensions
-    main(cb_size=(6, 8))
+    cb_size = (6, 8)
+    calib = CameraCalibration(cb_size=cb_size)
+    calib.calibrate()
+
+    main(cb_size=cb_size, mtx=calib.cam_calib_mat, dist=calib.lens_dist)
