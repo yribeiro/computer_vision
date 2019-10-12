@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 
 def find_cb_points(img, cb_size):
@@ -16,21 +17,33 @@ def find_cb_points(img, cb_size):
 
     if ret == True:
         corners = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), _criteria)
-
-        # draw the chessboard
-        cv2.drawChessboardCorners(img, cb_size, corners, ret)
-        cv2.imshow("Chessboard", img)
-        k = cv2.waitKey(1)
-
-        if k == ord("q"):
-            cv2.destroyAllWindows()
-            print("Exiting program")
-            exit(0)
     else:
         cv2.destroyAllWindows()
         print("No chess board found ...")
 
     return ret, corners
+
+
+def show_cb_corners_and_handle_program_exit(img, cb_size, ret, corners):
+    """
+    Function to ingest a chessboard image with a set of pixel coordinates
+    representing the points and plot that image to screen.
+
+    Function returns False if the user hits "q", which represents the program
+    needing to quit.
+
+    :param img: Image to display
+    :param cb_size: size of the chessboard to draw
+    :param corners: corners of the chessboard in pixel coords
+    :param ret:
+        Boolean value representing the presence of a chessboard in img, returned from
+        cv2.findChessboardCorners()
+    """
+    # draw the chessboard
+    cv2.drawChessboardCorners(img, cb_size, corners, ret)
+    cv2.imshow("Chessboard", img)
+    k = cv2.waitKey(1)
+    return k
 
 
 def main(cb_size):
@@ -41,7 +54,20 @@ def main(cb_size):
         ret, frame = cap.read()
 
         if ret == True:
-            _ = find_cb_points(frame, cb_size)
+            cb_ret, corners = find_cb_points(frame, cb_size)
+
+            if cb_ret == True:
+                user_val = show_cb_corners_and_handle_program_exit(frame, cb_size, cb_ret, corners)
+                if user_val == ord("q"):
+                    cv2.destroyAllWindows()
+                    print("Exiting program ..")
+                    exit(0)
+
+                # create real world object points and associated real world axes based
+                # based on chessboard configuration
+                objp = np.zeros((6 * 7, 3), np.float32)
+                objp[:, :2] = np.mgrid[0:7, 0:6].T.reshape(-1, 2)
+                axis = np.float32([[3, 0, 0], [0, 3, 0], [0, 0, -3]]).reshape(-1, 3)
 
     # When everything done, release the capture
     cap.release()
