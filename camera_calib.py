@@ -1,6 +1,9 @@
 import copy
 import cv2
 import os
+
+import numpy as np
+
 from utils import find_cb_points
 
 
@@ -42,8 +45,39 @@ class CameraCalibration:
 
         print("Finished image capture stage")
 
+    def _get_points(self):
+        """
+        Function to get the object points in 3D chessboard plane coords and
+        the corresponding image points on the board.
+
+        Obtains images from the calibration_images folder in the cwd.
+
+        :return: (obj_coords_list, img_coords_list) where obj_coords_list is a collection
+        of the chessboard corner coordinates in 3D chessboard plane and the img_coords_list is a
+        collection of the corresponding image coords in pixels.
+        """
+        files = os.listdir("calibration_images")
+
+        # create real world object points and associated real world axes based
+        # based on chessboard configuration
+        objp = np.zeros((self.cb_size[0] * self.cb_size[1], 3), np.float32)
+        objp[:, :2] = np.mgrid[0:self.cb_size[1], 0:self.cb_size[0]].T.reshape(-1, 2)
+
+        obj_coords_list = []
+        img_coords_list = []
+
+        for fname in files:
+            img = cv2.imread(os.path.join("calibration_images", fname))
+            cb_ret, corners = find_cb_points(img, self.cb_size)
+
+            if cb_ret == True:
+                obj_coords_list.append(objp)
+                img_coords_list.append(corners)
+
+        return obj_coords_list, img_coords_list
+
     def calibrate(self):
-        pass
+        print("Starting calibration")
 
 
 if __name__ == "__main__":
