@@ -11,6 +11,9 @@ class CameraCalibration:
     def __init__(self, cb_size=(6, 8)):
         self.cb_size = cb_size
 
+        # init necessary storage variables
+        self.cam_calib_mat, self.lens_dist = np.zeros((3, 3)), np.zeros((4, 1))
+
     def _capture_webcam_chessboard_image(self):
         """
         Function that returns a valid image with a chessboard pattern
@@ -76,8 +79,32 @@ class CameraCalibration:
 
         return obj_coords_list, img_coords_list
 
-    def calibrate(self):
+    def calibrate(self, save_flag=False, save_loc=""):
         print("Starting calibration")
+
+        obj_pts_list, img_pts_list = self._get_points()
+
+        # get the size of a random image
+        rimg = cv2.imread(os.path.join("calibration_images", os.listdir("calibration_images")[0]))
+        shape = (rimg.shape[1], rimg.shape[0])
+        rimg = None
+
+        rms, self.cam_calib_mat, self.lens_dist, _, _ = cv2.calibrateCamera(
+            obj_pts_list, img_pts_list,
+            imageSize=shape,
+            flags=None,
+            criteria=(cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 1e-6)
+        )
+
+        print("-"*20)
+        print(f"Calibrated off {len(obj_pts_list)} images")
+        print(f"DIM = {shape}")
+        print(f"Camera Calibration Matrix = {self.cam_calib_mat}")
+        print(f"Camera Lens Distortion = {self.lens_dist}")
+        print(f"RMS = {rms}")
+
+        if save_flag:
+            np.savez(os.path.join(save_loc, "calib_mat"), self.cam_calib_mat, self.lens_dist)
 
 
 if __name__ == "__main__":
