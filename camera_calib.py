@@ -13,6 +13,7 @@ class CameraCalibration:
 
         # init necessary storage variables
         self.cam_calib_mat, self.lens_dist = np.zeros((3, 3)), np.zeros((4, 1))
+        self.rvecs, self.tvecs = None, None
 
     def _capture_webcam_chessboard_image(self):
         """
@@ -89,7 +90,7 @@ class CameraCalibration:
         shape = (rimg.shape[1], rimg.shape[0])
         rimg = None
 
-        rms, self.cam_calib_mat, self.lens_dist, _, _ = cv2.calibrateCamera(
+        rms, self.cam_calib_mat, self.lens_dist, self.rvecs, self.tvecs = cv2.calibrateCamera(
             obj_pts_list, img_pts_list, shape, self.cam_calib_mat, self.lens_dist,
             None, None, criteria=(cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 1e-6)
         )
